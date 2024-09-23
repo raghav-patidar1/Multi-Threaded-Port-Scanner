@@ -73,7 +73,7 @@ python3 scanner.py <target> <port-range/multi-port/single-port> <verbose: true/f
 
 ## Error Handling
 
-- **Invalid Port Range**: Ensures ports are in the range of 0-65535.
+- **Invalid Port Range**: Ensures ports are in the range of 1-65535.
 - **Invalid Hostname**: Catches errors if the target hostname can't be resolved.
 - **Invalid Input**: Proper validation of input formats for ranges, multi-port lists, and single ports.
 - **Connection Errors**: Handles issues where the server can't be reached.
