@@ -22,9 +22,9 @@ No additional external libraries are required.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/raghav-patidar1/Multi-Threading-Port-Scanner.git
+git clone https://github.com/raghav-patidar1/Multi-Threaded-Port-Scanner.git
 
-cd Multi-Threading-Port-Scanner
+cd Multi-Threaded-Port-Scanner
 ```
 
 ### 2. Run the scanner with the following syntax:
