@@ -1,15 +1,15 @@
 import sys
 import socket
-import threading
 import time
+from threading import Thread
 
-#to display date and time in this format
+#to save all open ports on target
+open_ports = list()
+
+#to display time in this format
 time_format_string = "{}/{}/{} {}:{}:{}".format("%d","%m","%y","%H","%M","%S")
 
-#for open ports
-open_ports = []
-
-# Port scanner function
+# Port scanning function
 def scan_port(target, port, verbose):
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -18,47 +18,76 @@ def scan_port(target, port, verbose):
 
     if result == 0:
         open_ports.append(port)
-        print("Port {} is open".format(port))
+        print(f"Port {port} is open")
     elif verbose:
-        print("Port {} is closed".format(port))
-    
+        print(f"Port {port} is closed")
+
     s.close()
 
-# Define main function
+# Validate and process the port argument
+def process_ports(port_arg):
+    # Check for range-based port scanning (e.g., 80-550)
+    if '-' in port_arg:
+        start_port, end_port = port_arg.split('-')
+        try:
+            start_port = int(start_port)
+            end_port = int(end_port)
+
+            if start_port > end_port or not (0 < start_port <= 65535 and 0 < end_port <= 65535):
+                raise ValueError
+            return list(range(start_port, end_port + 1))
+        except ValueError:
+            raise ValueError("Invalid port range. Ensure it’s in the form startPort-endPort, with valid port numbers between 1 and 65535.")
+
+    # Check for multi-port scanning (e.g., 80,443,3306)
+    elif ',' in port_arg:
+        ports = port_arg.split(',')
+        try:
+            return [int(port) for port in ports if 0 < int(port) <= 65535]
+        except ValueError:
+            raise ValueError("Invalid port numbers in the list. Ensure each port is a valid number between 1 and 65535.")
+
+    # Single port scanning (e.g., 80)
+    else:
+        try:
+            port = int(port_arg)
+            if 0 < port <= 65535:
+                return [port]
+            else:
+                raise ValueError
+        except ValueError:
+            raise ValueError("Invalid single port. Ensure the port is a number between 1 and 65535.")
+
+# Main function to start the port scanner
 def main():
     if len(sys.argv) == 4:
         try:
             # Get target IP address
             target = socket.gethostbyname(sys.argv[1])  # Translate hostname to IPv4
-            
-            # Get port range
-            port_range = sys.argv[2].split('-')
-            start_port = int(port_range[0])
-            end_port = int(port_range[1])
-            
-            # Verbose flag
+
+            # Process the port argument (range, list, or single port)
+            ports = process_ports(sys.argv[2])
+
+            # Verbose flag (True/False)
             verbose = sys.argv[3].lower() == 'true'
-            
-            if start_port < 0 or end_port > 65535 or start_port > end_port:
-                raise ValueError("Port range is out of bounds or invalid.")
-            
+
         except socket.gaierror:
             print("Hostname could not be resolved.")
             sys.exit()
 
         except ValueError as e:
-            print("Ensure the port range is specified as 'startPort-endPort' with numeric values between 0 and 65535.")
+            print(f"Error: {e}")
             sys.exit()
-        
+
     else:
-        print("Invalid amount of arguments.")
-        print("Syntax: python3 scanner.py <target> <startPort-endPort> <verbose: True/False>")
+        print("Invalid number of arguments.")
+        print("Usage: python3 scanner.py <target> <port-range/multi-port/single-port> <verbose: true/false>")
         sys.exit()
 
-    # Add a banner
+    # Banner
     print("-" * 50)
     print("Scanning target {}".format(target))
-    print("Port range: {}-{}".format(start_port, end_port))
+    print(f"Ports: {', '.join(map(str, ports))}")
     print("Time started:",time.strftime(time_format_string))
     print("-" * 50)
 
@@ -67,25 +96,26 @@ def main():
         threads = []
         start_time = time.time()
 
-        for port in range(start_port, end_port + 1):
-            t = threading.Thread(target=scan_port, args=(target, port, verbose))
+        for port in ports:
+            t = Thread(target=scan_port, args=(target, port, verbose))
             threads.append(t)
             t.start()
 
         # Wait for all threads to complete
         for t in threads:
             t.join()
-
+        
         end_time = time.time()
+
         print("="*50)
         print("Open ports found are:", open_ports)
         print("="*50)
-        print("Total time taken (in seconds):", (end_time - start_time))
+        print("Total time taken (in seconds): {:.2f}".format((end_time - start_time)))
 
     except KeyboardInterrupt:
         print("\nExiting program.")
         sys.exit()
-        
+
     except socket.error:
         print("Could not connect to server.")
         sys.exit()
